@@ -5,73 +5,113 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Who’s playing?</title>
 <style>
-:root{--bg:#f3f1ec;--card:#fff;--ink:#1b1d22;--mute:#6b7080;--line:#dcd9d0;--free:#1f8a4c;--freebg:#e0f3e7;--busy:#b4372b;--busybg:#fbe4e0;--accent:#2b4fd8}
-@media (prefers-color-scheme:dark){:root{--bg:#14161b;--card:#1d2027;--ink:#eceef3;--mute:#9aa0b0;--line:#2e323c;--free:#5fd08c;--freebg:#17301f;--busy:#ff8a7c;--busybg:#3a1c19;--accent:#8aa2ff}}
+:root{color-scheme:light;--bg:#f4f6fa;--card:#fff;--ink:#172236;--mute:#68768b;--line:#e3e8f0;--line-strong:#cbd5e3;--free:#19734a;--freebg:#e8f5ed;--busy:#a44336;--busybg:#fbefed;--accent:#315bc8;--accent-hover:#264aa9;--shadow:0 18px 50px rgba(24,39,70,.08)}
+@media(prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#111722;--card:#192231;--ink:#edf2fb;--mute:#a1aec2;--line:#2a3749;--line-strong:#40516a;--free:#72d39b;--freebg:#1d3a2c;--busy:#f1a197;--busybg:#432927;--accent:#8eacff;--accent-hover:#aac0ff;--shadow:0 18px 50px rgba(0,0,0,.22)}}
 *{box-sizing:border-box}
-html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:20px 16px 60px}
-main{max-width:760px;margin:0 auto}
-h1{font-size:28px;margin:0 0 4px;letter-spacing:-.02em}
-h2{font-size:18px;margin:28px 0 10px}
-p.sub{color:var(--mute);margin:0 0 20px}
-input{font:inherit;width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
-input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
-button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 16px;background:var(--accent);color:#fff;font-weight:600}
-button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
-.note{color:var(--busy);font-size:14px;min-height:20px;margin:6px 0 0}
+html,body{margin:0;min-height:100%}
+body{background:radial-gradient(ellipse at 14% 0,rgba(72,108,190,.10),transparent 38%),var(--bg);color:var(--ink);font:15px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;padding:0 22px 72px}
+main{max-width:1000px;margin:0 auto}
+.topbar{height:82px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px;color:inherit;text-decoration:none}
+.brand-mark{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(145deg,#416bd5,#294ba7);color:#fff;font-size:13px;font-weight:800;letter-spacing:-.05em;box-shadow:0 7px 16px rgba(49,91,200,.22)}
+.brand-copy{display:grid;line-height:1.25}.brand-copy strong{font-size:15px;letter-spacing:-.02em}.brand-copy small{color:var(--mute);font-size:12px;margin-top:3px}
+.live-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--line);border-radius:99px;background:var(--card);color:var(--mute);font-size:12px;font-weight:650}
+.live-dot{width:7px;height:7px;background:#22a267;border-radius:50%;box-shadow:0 0 0 3px rgba(34,162,103,.12)}
+.intro{padding:42px 0 28px}.eyebrow{margin:0 0 8px;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+h1{font-size:clamp(31px,5vw,42px);line-height:1.12;margin:0;letter-spacing:-.045em}
+.intro p{margin:10px 0 0;color:var(--mute);font-size:16px}
+h2{font-size:20px;line-height:1.25;margin:0;letter-spacing:-.025em}
+input{font:inherit;width:100%;min-width:0;padding:13px 15px;border:1px solid var(--line-strong);border-radius:11px;background:var(--card);color:var(--ink);transition:border-color .18s,box-shadow .18s}
+input::placeholder{color:color-mix(in srgb,var(--mute) 72%,transparent)}
+input:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 15%,transparent)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button{font:inherit;cursor:pointer;border:0;border-radius:11px;padding:12px 17px;background:var(--accent);color:#fff;font-weight:700;transition:background .18s,transform .18s,box-shadow .18s}
+button:hover{background:var(--accent-hover);box-shadow:0 6px 14px color-mix(in srgb,var(--accent) 22%,transparent)}
+button:active{transform:translateY(1px)}
+button.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line-strong);box-shadow:none}
+button.ghost:hover{background:var(--bg);border-color:var(--line-strong)}
+.join-card{max-width:620px;margin:12px auto 0;padding:32px;border:1px solid var(--line);border-radius:22px;background:var(--card);box-shadow:var(--shadow)}
+.join-card .eyebrow{margin-bottom:7px}.join-card h2{font-size:23px}.join-copy{margin:8px 0 22px;color:var(--mute)}
+.field-label{display:block;margin:0 0 7px;font-size:13px;font-weight:700}
+.note{color:var(--mute);font-size:12px;min-height:18px;margin:8px 0 0}
 .row{display:flex;gap:10px;align-items:center}
+#nickView .row input{flex:1}#nickView .row button{white-space:nowrap}
 .hidden{display:none!important}
-#now{display:grid;gap:8px}
-.player{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px}
-.player.me{border-color:var(--accent)}
-.player b{font-weight:700}
-.player small{color:var(--mute);display:block}
-.empty{color:var(--mute);padding:14px;border:1.5px dashed var(--line);border-radius:12px}
+.identity-bar{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:15px 18px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+.identity-copy{display:flex;align-items:center;gap:10px}.identity-mark{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:var(--freebg);color:var(--free);font-size:13px;font-weight:800}
+.identity-label{display:block;color:var(--mute);font-size:10px;font-weight:800;letter-spacing:.11em}.identity-copy b{font-size:14px}
+.panel{margin-top:18px;padding:24px;border:1px solid var(--line);border-radius:18px;background:var(--card);box-shadow:0 8px 25px rgba(24,39,70,.035)}
+.section-title{display:flex;justify-content:space-between;align-items:end;margin-bottom:16px}.section-title .eyebrow{margin-bottom:5px}
+#now{display:grid;gap:9px}
+.player{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--bg);border:1px solid var(--line);border-radius:13px;padding:13px 15px}
+.player.me{border-color:color-mix(in srgb,var(--accent) 50%,var(--line));background:color-mix(in srgb,var(--accent) 5%,var(--card))}
+.player b{font-weight:750}.player small{color:var(--mute);display:block;font-size:12px;margin-top:2px}
+.empty{color:var(--mute);padding:17px 15px;border:1px dashed var(--line-strong);border-radius:13px;background:var(--bg)}
 .search{position:relative}
-#sug{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--card);border:1.5px solid var(--line);border-radius:10px;z-index:5;max-height:280px;overflow:auto}
-.opt{display:flex;justify-content:space-between;gap:10px;padding:10px 14px;cursor:pointer}
+#sug{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--card);border:1px solid var(--line-strong);border-radius:13px;z-index:5;max-height:300px;overflow:auto;box-shadow:var(--shadow);padding:5px}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 11px;border-radius:9px;cursor:pointer}
 .opt.on,.opt:hover{background:var(--bg)}
-.chip{font-size:13px;font-weight:600;padding:2px 10px;border-radius:99px;white-space:nowrap}
-.chip.free{background:var(--freebg);color:var(--free)}
-.chip.busy{background:var(--busybg);color:var(--busy)}
-#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
-.game{background:var(--card);color:var(--ink);font-weight:400;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-align:left}
-.game span.who{color:var(--mute);font-size:13px}
-.msg{font-size:14px;color:var(--mute);margin-top:8px}
+.chip{font-size:11px;font-weight:750;padding:4px 9px;border-radius:99px;white-space:nowrap}
+.chip.free{background:var(--freebg);color:var(--free)}.chip.busy{background:var(--busybg);color:var(--busy)}
+.games-section{margin-top:30px}.games-section .section-title{margin-bottom:15px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:11px}
+.game{min-height:104px;background:var(--card);color:var(--ink);font-weight:400;border:1px solid var(--line);border-radius:14px;padding:14px 15px;cursor:pointer;display:flex;flex-direction:column;gap:9px;align-items:flex-start;text-align:left;transition:transform .18s,border-color .18s,box-shadow .18s}
+.game:hover{transform:translateY(-2px);border-color:var(--line-strong);box-shadow:0 10px 24px rgba(24,39,70,.08);background:var(--card)}
+.game b{font-size:14px;line-height:1.35}.game span.who{color:var(--mute);font-size:12px}
+.msg{font-size:13px;color:var(--mute);margin:8px 0 0;min-height:20px}
+@media(max-width:640px){body{padding:0 16px 48px}.topbar{height:72px}.intro{padding:32px 0 22px}.join-card{padding:24px 20px;border-radius:18px}.panel{padding:19px 16px;border-radius:16px}#grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px}.game{min-height:98px;padding:12px}.identity-bar{padding:12px}.live-badge{font-size:11px}.section-title{align-items:start}}
+@media(max-width:390px){#nickView .row{align-items:stretch;flex-direction:column}#nickView .row button{width:100%}.brand-copy small{font-size:11px}}
 </style>
 </head>
 <body>
 <main>
-  <h1>Who’s playing?</h1>
-  <p class="sub" id="sub">Live board. Pick a game and everyone sees it.</p>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Who’s playing? Home"><span class="brand-mark">WP</span><span class="brand-copy"><strong>Who’s playing?</strong><small>Steam game availability</small></span></a>
+    <span class="live-badge"><span class="live-dot"></span>Live board</span>
+  </header>
 
-  <section id="nickView">
-    <p>What should we call you?</p>
+  <section class="intro">
+    <p class="eyebrow">YOUR GROUP’S GAME STATUS</p>
+    <h1>Find your next game.</h1>
+    <p id="sub">See what’s free, what’s in progress, and who’s at the controls.</p>
+  </section>
+
+  <section id="nickView" class="join-card">
+    <p class="eyebrow">PLAYER SETUP</p>
+    <h2>Join the board</h2>
+    <p class="join-copy">Choose a nickname so your friends know who’s playing.</p>
+    <label class="field-label" for="nick">Nickname</label>
     <div class="row">
-      <input id="nick" maxlength="12" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Nickname">
-      <button id="nickGo">Continue</button>
+      <input id="nick" maxlength="12" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. Alex">
+      <button id="nickGo">Join board <span aria-hidden="true">→</span></button>
     </div>
     <p class="note" id="nickNote">Maximum of 12 letters (A–Z)</p>
   </section>
 
   <section id="boardView" class="hidden">
-    <div class="row" style="justify-content:space-between">
-      <span>Playing as <b id="me"></b></span>
+    <div class="identity-bar">
+      <span class="identity-copy"><span class="identity-mark">You</span><span><small class="identity-label">PLAYING AS</small><b id="me"></b></span></span>
       <button class="ghost" id="rename">Change name</button>
     </div>
 
-    <h2>Playing now</h2>
-    <div id="now"></div>
+    <section class="panel">
+      <div class="section-title"><div><p class="eyebrow">REAL-TIME ACTIVITY</p><h2>Playing now</h2></div></div>
+      <div id="now"></div>
+    </section>
 
-    <h2>What are you playing?</h2>
-    <div class="search">
-      <input id="q" autocomplete="off" spellcheck="false" placeholder="Type a game name, then press Enter" role="combobox" aria-expanded="false" aria-controls="sug">
-      <div id="sug" class="hidden" role="listbox"></div>
-    </div>
-    <p class="msg" id="msg"></p>
+    <section class="panel">
+      <div class="section-title"><div><p class="eyebrow">CHOOSE YOUR NEXT GAME</p><h2>What are you playing?</h2></div></div>
+      <div class="search">
+        <input id="q" autocomplete="off" spellcheck="false" placeholder="Search games by name..." role="combobox" aria-expanded="false" aria-controls="sug">
+        <div id="sug" class="hidden" role="listbox"></div>
+      </div>
+      <p class="msg" id="msg"></p>
+    </section>
 
-    <h2>All games</h2>
-    <div id="grid"></div>
+    <section class="games-section">
+      <div class="section-title"><div><p class="eyebrow">YOUR STEAM LIBRARY</p><h2>All games</h2></div></div>
+      <div id="grid"></div>
+    </section>
   </section>
 </main>
 
