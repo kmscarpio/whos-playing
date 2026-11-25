@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Who’s playing?</title>
+<style>
+:root{--bg:#f3f1ec;--card:#fff;--ink:#1b1d22;--mute:#6b7080;--line:#dcd9d0;--free:#1f8a4c;--freebg:#e0f3e7;--busy:#b4372b;--busybg:#fbe4e0;--accent:#2b4fd8}
+@media (prefers-color-scheme:dark){:root{--bg:#14161b;--card:#1d2027;--ink:#eceef3;--mute:#9aa0b0;--line:#2e323c;--free:#5fd08c;--freebg:#17301f;--busy:#ff8a7c;--busybg:#3a1c19;--accent:#8aa2ff}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:20px 16px 60px}
+main{max-width:760px;margin:0 auto}
+h1{font-size:28px;margin:0 0 4px;letter-spacing:-.02em}
+h2{font-size:18px;margin:28px 0 10px}
+p.sub{color:var(--mute);margin:0 0 20px}
+input{font:inherit;width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 16px;background:var(--accent);color:#fff;font-weight:600}
+button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.note{color:var(--busy);font-size:14px;min-height:20px;margin:6px 0 0}
+.row{display:flex;gap:10px;align-items:center}
+.hidden{display:none!important}
+#now{display:grid;gap:8px}
+.player{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px}
+.player.me{border-color:var(--accent)}
+.player b{font-weight:700}
+.player small{color:var(--mute);display:block}
+.empty{color:var(--mute);padding:14px;border:1.5px dashed var(--line);border-radius:12px}
+.search{position:relative}
+#sug{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--card);border:1.5px solid var(--line);border-radius:10px;z-index:5;max-height:280px;overflow:auto}
+.opt{display:flex;justify-content:space-between;gap:10px;padding:10px 14px;cursor:pointer}
+.opt.on,.opt:hover{background:var(--bg)}
+.chip{font-size:13px;font-weight:600;padding:2px 10px;border-radius:99px;white-space:nowrap}
+.chip.free{background:var(--freebg);color:var(--free)}
+.chip.busy{background:var(--busybg);color:var(--busy)}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.game{background:var(--card);color:var(--ink);font-weight:400;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-align:left}
+.game span.who{color:var(--mute);font-size:13px}
+.msg{font-size:14px;color:var(--mute);margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Who’s playing?</h1>
+  <p class="sub" id="sub">Live board. Pick a game and everyone sees it.</p>
+
+  <section id="nickView">
+    <p>What should we call you?</p>
+    <div class="row">
+      <input id="nick" maxlength="12" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Nickname">
+      <button id="nickGo">Continue</button>
+    </div>
+    <p class="note" id="nickNote">Maximum of 12 letters (A–Z)</p>
+  </section>
+
+  <section id="boardView" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <span>Playing as <b id="me"></b></span>
+      <button class="ghost" id="rename">Change name</button>
+    </div>
+
+    <h2>Playing now</h2>
+    <div id="now"></div>
+
+    <h2>What are you playing?</h2>
+    <div class="search">
+      <input id="q" autocomplete="off" spellcheck="false" placeholder="Type a game name, then press Enter" role="combobox" aria-expanded="false" aria-controls="sug">
+      <div id="sug" class="hidden" role="listbox"></div>
+    </div>
+    <p class="msg" id="msg"></p>
+
+    <h2>All games</h2>
+    <div id="grid"></div>
+  </section>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyB_NcpdsSmZRid8GyzmLGhccuGxd4Dhm7o",
+  authDomain: "whoisplayingsteam.firebaseapp.com",
+  databaseURL: "https://whoisplayingsteam-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "whoisplayingsteam",
+  storageBucket: "whoisplayingsteam.firebasestorage.app",
+  messagingSenderId: "406874259083",
+  appId: "1:406874259083:web:ad9d3d9d8276d7b0b95e8e"
+};
+const CONFIRMS_NEEDED = 3;
+const GAMES = ["112 Operator","911 Operator","Arcade Moonlander","Aseprite","Autobahn Police Simulator","Battlestar Galactica Deadlock","Besiege","Blair Witch","Blasphemous","Blender","Blood and Bacon","BOKURA","Borderlands 2","Buckshot Roulette","CODE VEIN","Company of Heroes 2","Content Warning","Crowalt: Traces of the Lost Colony","Dead by Daylight","Dead Cells","Deep Rock Galactic","Deiland","Devil May Cry HD Collection","DON'T SCREAM","Drawful 2","Dying Light","The Elder Scrolls V: Skyrim Special","Emily Wants To Play","The Escapists","The Escapists 2","Estranged: The Departure","The Exit 8","F1 2015","For Honor - Public Test","The Forest","Fran Bow","Geometry Dash","Getting Over It with Bennett Foddy","Graveyard Keeper","Gravity Wars","Guns of Icarus Online","Hacknet","Headsnatchers","HITMAN™ 2","Homefront","THE HOUSE OF THE DEAD: Remake","How to Fish","INSIDE","Insurgency","Intravenous","Lara Croft and the Temple of Osiris","Layers of Fear (2016)","Left 4 Dead","Left 4 Dead 2","LEGO® The Lord of the Rings™","Lethal Company","Life is Strange™","Life is Strange 2","Life is Strange: Before the Storm Remastered","Life is Strange Remastered","LIMBO","Little Nightmares","Little Nightmares Enhanced Edition","LOCKDOWN Protocol","Lovers ' Smiles","MECCHA CHAMELEON","Melatonin","Mortal Kombat 11","Mouthwashing","Muse Dash","NEEDY STREAMER OVERLOAD","OMORI","One Drop Bot","PANICORE","Parasocial | パラソーシャル","PAYDAY 2","Phasmophobia","PICO PARK","Polygoneer","PUBG: BATTLEGROUNDS","Rat Quest","The Red Solstice","Resident Evil 2","Resident Evil 4","Resident Evil 7 Biohazard","Satellite Reign","Sins of a Solar Empire: Rebellion","Smack Studio","Sons Of The Forest","s.p.l.i.t","Stardew Valley","A Story About My Uncle","Surviving Mars","TEKKEN 7","Tell Me Why","Terraria","That's not my Neighbor","tModLoader","Tomb Raider","Toy Tinker Simulator","Transpose","Unboxing the Cryptic Killer","Undertale","Until Then","Unturned"];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+
+let db = null, players = {}, nick = '', myId = 'p' + Math.random().toString(36).slice(2,10), myRef = null, sugList = [], sugIdx = -1;
+try { nick = localStorage.getItem('wp_nick') || ''; } catch(e){}
+if (!/^[A-Za-z]{1,12}$/.test(nick)) nick = '';
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  myRef = db.ref('players/' + myId);
+  db.ref('players').on('value', s => { players = s.val() || {}; render(); }, () => {
+    $('sub').textContent = 'Can’t reach the database. Check the Firebase rules and your connection.';
+  });
+} catch(e) { $('sub').textContent = 'Firebase failed to load.'; }
+
+// ---- nickname ----
+$('nick').addEventListener('input', e => {
+  const raw = e.target.value, clean = raw.replace(/[^A-Za-z]/g,'').slice(0,12);
+  e.target.value = clean;
+  $('nickNote').textContent = raw !== clean && raw.replace(/[A-Za-z]/g,'') ? 'Letters only (A–Z), maximum of 12' : 'Maximum of 12 letters (A–Z)';
+});
+function setNick(){
+  const v = $('nick').value;
+  if (!/^[A-Za-z]{1,12}$/.test(v)) { $('nickNote').textContent = 'Enter 1 to 12 letters (A–Z)'; return; }
+  nick = v; try { localStorage.setItem('wp_nick', nick); } catch(e){}
+  show();
+}
+$('nickGo').onclick = setNick;
+$('nick').addEventListener('keydown', e => { if (e.key === 'Enter') setNick(); });
+$('rename').onclick = () => { stop(); nick = ''; show(); $('nick').focus(); };
+function show(){
+  $('nickView').classList.toggle('hidden', !!nick);
+  $('boardView').classList.toggle('hidden', !nick);
+  $('me').textContent = nick;
+  render();
+}
+
+// ---- data helpers ----
+const entries = () => Object.entries(players).filter(([,p]) => p && p.nick && p.game);
+const playersOf = g => entries().filter(([id,p]) => p.game === g && id !== myId).map(([,p]) => p.nick);
+const mine = () => players[myId];
+
+function post(game){
+  if (!myRef) return;
+  myRef.onDisconnect().remove();
+  myRef.set({nick, game, since: Date.now()}).catch(() => $('msg').textContent = 'Couldn’t post. Check the Firebase rules.');
+  $('msg').textContent = 'You’re now playing ' + game + '.';
+}
+function stop(){ if (myRef) myRef.remove(); }
+
+function choose(game){
+  if (mine() && mine().game === game) return;
+  const who = playersOf(game);
+  if (who.length) {
+    const names = who.join(', ');
+    for (let i = 1; i <= CONFIRMS_NEEDED; i++) {
+      if (!confirm(names + (who.length > 1 ? ' are' : ' is') + ' already playing ' + game + '.\n\nDo you really want to continue? (' + i + ' of ' + CONFIRMS_NEEDED + ')')) { $('msg').textContent = 'Cancelled.'; return; }
+    }
+  }
+  post(game);
+  $('q').value = ''; closeSug();
+}
+
+// ---- search ----
+function lev(a,b){
+  const m = a.length, n = b.length; if (!m) return n; if (!n) return m;
+  let prev = Array.from({length:n+1},(_,j)=>j);
+  for (let i=1;i<=m;i++){ const cur=[i]; for (let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); prev=cur; }
+  return prev[n];
+}
+function score(q, name){
+  const n = norm(name); if (!n) return 0;
+  if (n.startsWith(q)) return 200 - n.length / 10;
+  const at = n.indexOf(q); if (at >= 0) return 150 - at;
+  const qt = q.split(' '), nt = n.split(' '); let total = 0;
+  for (const t of qt) {
+    let best = 99;
+    for (const w of nt) best = Math.min(best, lev(t, w.slice(0, t.length)), lev(t, w));
+    const tol = t.length <= 3 ? 0 : t.length <= 6 ? 1 : 2;
+    if (best > tol) return 0;
+    total += 60 - best * 15;
+  }
+  return total / qt.length;
+}
+function suggest(){
+  const q = norm($('q').value);
+  if (!q) { closeSug(); return; }
+  sugList = GAMES.map(g => [g, score(q, g)]).filter(x => x[1] > 0).sort((a,b) => b[1]-a[1]).slice(0,7).map(x => x[0]);
+  sugIdx = sugList.length ? 0 : -1;
+  const box = $('sug');
+  if (!sugList.length) { box.innerHTML = '<div class="opt">No match in the game list</div>'; box.classList.remove('hidden'); return; }
+  box.innerHTML = sugList.map((g,i) => {
+    const w = playersOf(g);
+    return '<div class="opt' + (i===sugIdx?' on':'') + '" role="option" data-i="' + i + '"><span>' + esc(g) + '</span><span class="chip ' + (w.length?'busy':'free') + '">' + (w.length ? 'Occupied: ' + esc(w.join(', ')) : 'Available') + '</span></div>';
+  }).join('');
+  box.classList.remove('hidden'); $('q').setAttribute('aria-expanded','true');
+}
+function closeSug(){ $('sug').classList.add('hidden'); $('q').setAttribute('aria-expanded','false'); sugList = []; sugIdx = -1; }
+$('q').addEventListener('input', suggest);
+$('q').addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown' && sugList.length) { e.preventDefault(); sugIdx = (sugIdx+1) % sugList.length; paintSug(); }
+  else if (e.key === 'ArrowUp' && sugList.length) { e.preventDefault(); sugIdx = (sugIdx-1+sugList.length) % sugList.length; paintSug(); }
+  else if (e.key === 'Enter' && sugIdx >= 0) { e.preventDefault(); choose(sugList[sugIdx]); }
+  else if (e.key === 'Escape') closeSug();
+});
+function paintSug(){ [...$('sug').children].forEach((c,i) => c.classList.toggle('on', i === sugIdx)); }
+$('sug').addEventListener('mousedown', e => { const o = e.target.closest('[data-i]'); if (o) { e.preventDefault(); choose(sugList[+o.dataset.i]); } });
+document.addEventListener('click', e => { if (!e.target.closest('.search')) closeSug(); });
+
+// ---- render ----
+function ago(ms){ const m = Math.floor((Date.now()-ms)/60000); return m < 1 ? 'just now' : m < 60 ? m + ' min' : Math.floor(m/60) + ' h ' + (m%60) + ' min'; }
+function render(){
+  if (!nick) return;
+  const list = entries().sort((a,b) => a[1].since - b[1].since);
+  $('now').innerHTML = list.length ? list.map(([id,p]) =>
+    '<div class="player' + (id===myId?' me':'') + '"><div><b>' + esc(p.nick) + '</b> is playing ' + esc(p.game) + '<small>' + ago(p.since) + '</small></div>' +
+    (id===myId ? '<button class="ghost" data-stop="1">Stop</button>' : '') + '</div>').join('')
+    : '<div class="empty">Nobody is playing right now.</div>';
+  const occ = g => entries().some(([,p]) => p.game === g);
+  $('grid').innerHTML = GAMES.map((g,i) => [g,i]).sort((a,b) => occ(b[0]) - occ(a[0])).map(([g,i]) => {
+    const w = entries().filter(([,p]) => p.game === g).map(([,p]) => p.nick);
+    return '<button class="game" data-g="' + i + '"><b>' + esc(g) + '</b><span class="chip ' + (w.length?'busy':'free') + '">' + (w.length?'Occupied':'Available') + '</span>' + (w.length ? '<span class="who">' + esc(w.join(', ')) + '</span>' : '') + '</button>';
+  }).join('');
+}
+$('now').addEventListener('click', e => { if (e.target.dataset.stop) { stop(); $('msg').textContent = 'You stopped playing.'; } });
+$('grid').addEventListener('click', e => { const b = e.target.closest('[data-g]'); if (b) choose(GAMES[+b.dataset.g]); });
+setInterval(render, 30000);
+
+// ---- leaving the page frees the game ----
+window.addEventListener('pagehide', stop);
+window.addEventListener('pageshow', e => { if (e.persisted && nick && lastGame) post(lastGame); });
+let lastGame = '';
+if (db) db.ref('players').on('value', () => { if (mine()) lastGame = mine().game; });
+
+show();
+</script>
+</body>
+</html>
+
